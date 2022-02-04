@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
+        integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+    <title>RENT A CAR</title>
+
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="#">Rent a car "LUX"</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
+            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav">
+                <li class="nav-item active">
+                    <a class="nav-link" href="index.html">Početna</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="rentacar.html">Saloni</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="automobili.html">Automobili</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="kontakt.html">Kontakt</a>
+                </li>
+
+            </ul>
+        </div>
+    </nav>
+
+    <div>
+        <p><button onclick="sortTable()" style="background-color: rgb(110, 106, 62);">Sortiraj</button></p>
+    </div>
+
+    <div>
+        <input type="text" id="myInput" onkeyup="myFunction()" placeholder="Pretrazi po nazivu" title="Type in a name">
+    </div>
+
+
+    <div>
+        <table id="auto" class="table display">
+            <tr>
+                <th scope="col">Rb</th>
+                <th scope="col">Naziv</th>
+                <th scope="col">Kategorija</th>
+                <th scope="col">Broj vozila</th>
+            </tr>
+            <tbody id="auto_podaci"></tbody>
+
+        </table>
+
+
+    </div>
+    <div class="formaZaDodavanje">
+        <h1>Dodaj automobil</h1>
+        <form class="mt-5">
+            <div class="form-group">
+                <input type="text" class="form-control" id="naziv" placeholder="Naziv">
+            </div>
+            <div class="form-group">
+                <select class="form-control" id="novaKategorija">
+
+                </select>
+            </div>
+            <div class="form-group">
+                <input type="text" class="form-control" type="number" id="brojAuta" placeholder="Broj vozila">
+            </div>
+            <div class="form-group">
+                <button class="btn btn-primary" id="dodajAuto">Dodaj Auto</button>
+            </div>
+        </form>
+    </div>
+
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            napuniTabelu();
+            napuniKategorije("novaKategorija");
+            $("#dodajAuto").click(function (e) {
+                e.preventDefault();
+                $.post("auto.php", {
+                    metoda: "dodaj",
+                    naziv: $("#naziv").val(),
+                    kategorija: $("#novaKategorija").val(),
+                    broj_auta: $("#brojAuta").val()
+                }, function (data) {
+                    alert(data);
+                    napuniTabelu();
+
+                })
+            })
+        });
+        function napuniTabelu() {
+            $.getJSON("auto.php", { metoda: "vrati sve" }, function (data) {
+                console.log(data);
+                if (data.status !== "ok") {
+                    alert(data.status);
+                    return;
+                }
+                let i = 0;
+                $("#auto_podaci").html("");
+                for (let auto of data.data) {
+                    $("#auto_podaci").append(`<tr>
+                        <th scope="row">${++i}.</th>
+                    <td contentEditable=true id="${auto.id}Naziv" >${auto.naziv} </td>
+                    <td contentEditable=true ><select class="form-control" id="${auto.id}Kat" ></td>
+                    <td contentEditable=true id="${auto.id}auto" >${auto.broj_auta} </td>
+                    <td>
+                        <button onClick="izmeniAuto(${auto.id})">Izmeni</button>
+                        <button onClick="obrisiAuto(${auto.id})" >Obrisi</button>
+                    </td>
+                </tr>`);
+                    napuniKategorije(`${auto.id}Kat`, auto.kat_id);
+                }
+            });
+
+        }
+        function napuniKategorije(element, value = undefined) {
+            $.getJSON("auto.php", { metoda: "vrati kategorije" }, function (data) {
+                if (data.status !== "ok") {
+                    alert(data.status);
+                    return;
+                }
+                $("#" + element).html(``);
+
+                for (let kat of data.data) {
+                    $("#" + element).append(`<option value='${kat.id}' > ${kat.naziv} </option>`);
+                }
+                if (value) {
+                    $("#" + element).val(value);
+                }
+            })
+        }
+        function obrisiAuto(id) {
+            $.post("auto.php", { metoda: "obrisi", id: id }, function (data) {
+                napuniTabelu();
+            })
+        }
+        function izmeniAuto(id) {
+            let naziv = $(`#${id}Naziv`).text();
+            let kategorija = $(`#${id}Kat`).val();
+            let brojAuta = $(`#${id}auto`).text();
+            console.log({
+                metoda: "izmeni",
+                id: id,
+                naziv: naziv,
+                kategorija: kategorija,
+                broj_auta: brojAuta
+            });
+            $.post("auto.php", {
+                metoda: "izmeni",
+                id: id,
+                naziv: naziv,
+                kategorija: kategorija,
+                broj_auta: brojAuta
+            }, function (data) {
+                console.log(data);
+                napuniTabelu();
+            })
+        }
+
+
+
+            function sortTable() {
+             var table, rows, switching, i, x, y, shouldSwitch;
+                table = document.getElementById("auto");
+                switching = true;
+                
+                while (switching) {
+                
+                switching = false;
+                rows = table.rows;
+               
+                for (i = 1; i < (rows.length - 1); i++) {
+                
+                shouldSwitch = false;
+                
+                x = rows[i].getElementsByTagName("TD")[0];
+                y = rows[i + 1].getElementsByTagName("TD")[0];
+                
+                if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+                    
+                    shouldSwitch = true;
+                    break;
+                }
+                }
+                if (shouldSwitch) {
+                
+                rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                switching = true;
+                }
+    }
+    }
+
+    function myFunction() {
+  var input, filter, table, tr, td, i, txtValue;
+  input = document.getElementById("myInput");
+  filter = input.value.toUpperCase();
+  table = document.getElementById("auto");
+  tr = table.getElementsByTagName("tr");
+  for (i = 0; i < tr.length; i++) {
+    td = tr[i].getElementsByTagName("td")[0];
+    if (td) {
+      txtValue = td.textContent || td.innerText;
+      if (txtValue.toUpperCase().indexOf(filter) > -1) {
+        tr[i].style.display = "";
+      } else {
+        tr[i].style.display = "none";
+      }
+    }       
+  }
+}
+
+    </script>
+
+
+
+
+</body>
+
+</html>

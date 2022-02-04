@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+
+    <title>RENT A CAR</title>
+
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="#">Rent a car "LUX"</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
+            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav">
+                <li class="nav-item active">
+                    <a class="nav-link" href="index.html">Početna</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="rentacar.html">Saloni</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="automobili.html">Automobili</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="kontakt.html">Kontakt</a>
+                </li>
+
+            </ul>
+        </div>
+    </nav>
+    <div id="carWrapper">
+        <label id="izabranRent" hidden=true></label>
+        <table class="table">
+            <tr>
+                <th scope="col">Rb</th>
+                <th scope="col">Naziv</th>
+                <th scope="col">Adresa</th>
+            </tr>
+            <tbody id="rent">
+
+            </tbody>
+
+        </table>
+    </div>
+    <div id="autoWrapper" hidden="true">
+
+        <table id="auto" class="table" hidden="true">
+            <tr>
+                <th scope="col">Rb</th>
+                <th scope="col">Naziv</th>
+                <th scope="col">Broj primeraka</th>
+            </tr>
+            <tbody id="autoBody"></tbody>
+        </table>
+        <div id="dodavanjeNoveVeze" hidden=true>
+            <select id="komboSaAutima" class="form-control"></select>
+            <input class="form-control" type="text" id="brojPrimeraka" placeholder="Broj primeraka" />
+            <button id="dodajVezu">Dodaj automobil</button>
+        </div>
+    </div>
+    <div id="novSalon">
+        <h1>Dodaj salon</h1>
+        <form class="mt-5">
+            <div class="form-group">
+                <input type="text" class="form-control" id="nazivSalona" placeholder="Naziv">
+            </div>
+            <div class="form-group">
+                <input type="text" class="form-control" id="adresaSalona" placeholder="Adresa">
+            </div>
+            <div class="form-group">
+                <button class="btn btn-primary" id="dodajSalon">Dodaj salon</button>
+            </div>
+        </form>
+
+    </div>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            napuniSalon();
+            $("#dodajSalon").click(function (e) {
+                e.preventDefault();
+                $.post("rentacar.php", {
+                    metoda: "dodaj",
+                    naziv: $("#nazivSalona").val(),
+                    adresa: $("#adresaSalona").val()
+                }, function (data) {
+                    if (data !== "ok") {
+                        alert(data);
+                    }
+                    napuniSalon();
+                })
+            })
+            $("#dodajVezu").click(dodajVezuKlik);
+        });
+
+        function napuniSalon() {
+            $.getJSON("rentacar.php", { metoda: "vratiSve" }, function (data) {
+                console.log(data);
+                if (data.status !== "ok") {
+                    alert(data.status);
+                    return;
+                }
+                $("#rent").html("");
+                let i = 0;
+                for (let salon of data.data) {
+                    $("#rent").append(`<tr>
+                        <th>${++i}</th>
+                        <td contentEditable=true id="${salon.id}Naziv">${salon.naziv}</td>
+                        <td contentEditable=true id="${salon.id}Adresa" >${salon.adresa}</td>
+                        <td>
+                            <button onClick="prikaziAutomobile(${salon.id})">Vidi sve automobile</button>
+                            <button onClick="izmeniSalon(${salon.id})">Izmeni</button>
+                            <button onClick="obrisiSalon(${salon.id})">Obrisi</button>
+                        </td>
+                    </tr>`)
+                }
+            })
+        }
+        function izmeniSalon(id) {
+            let naziv = $(`#${id}Naziv`).text();
+            let adresa = $(`#${id}Adresa`).text();
+            $.post("rentacar.php", {
+                metoda: "izmeni",
+                id: id,
+                naziv: naziv,
+                adresa: adresa
+            }, function (data) {
+                if (data !== "ok") {
+                    alert(data);
+                }
+                napuniSalon();
+            })
+        }
+        function obrisiSalon(id) {
+            $.post("rentacar.php", { metoda: "obrisi", id: id }, function (data) {
+                if (data !== "ok") {
+                    alert(data);
+                }
+                napuniSalon();
+            })
+        }
+        function prikaziAutomobile(id) {
+            $.getJSON("auto.php", { metoda: "vrati iz salona", salon: id }, function (data) {
+                console.log(data);
+                if (data.status !== "ok") {
+                    alert(data.status);
+                    return;
+                }
+
+                let i = 0;
+                $("#auto").attr("hidden", false);
+                $("#autoWrapper").attr("hidden", false);
+                $("#autoBody").html("");
+                for (let auto of data.data) {
+                    $("#autoBody").append(`
+                        <tr>
+                            <td>${++i}.</td>
+                            <td>${auto.naziv}</td>
+                            <td>${auto.brojPrimeraka}</td>
+                            <td>
+                                <button onClick="obrisiVezu(${id},${auto.id})"> Obrisi</button>
+                            </td>
+                        </tr>
+                    `);
+                }
+                $("#izabranRent").val(id);
+                napuniKomboSaAutima(id);
+
+            })
+        }
+        function napuniKomboSaAutima(salon) {
+            $.getJSON("auto.php", { metoda: "vrati sve" }, function (data) {
+                console.log(data);
+                if (data.status !== "ok") {
+                    alert(data.status);
+                    return;
+                }
+                $("#dodavanjeNoveVeze").attr("hidden", false);
+                $("#komboSaAutima").html("");
+                for (let auto of data.data) {
+                    $("#komboSaAutima").append(`<option value ="${auto.id}" >${auto.naziv}</option>`);
+                }
+            })
+        }
+        function dodajVezuKlik(e) {
+            e.preventDefault();
+            $.post("rentacar.php", {
+                metoda: "dodajVezu",
+                salon: $("#izabranRent").val(),
+                auto: $("#komboSaAutima").val(),
+                brojPrimeraka: $("#brojPrimeraka").val()
+            }, function (data) {
+                if (data !== "ok") {
+                    alert(data);
+                }
+                prikaziAutomobile($("#izabranRent").val());
+            })
+        }
+        function obrisiVezu(salon, auto) {
+            $.post("rentacar.php", {
+                metoda: "obrisiVezu",
+                salon: salon,
+                auto: auto
+            }, function (data) {
+                if (data !== "ok") {
+                    alert(data);
+                }
+                prikaziAutomobile($("#izabranRent").val());
+            })
+        }
+    </script>
+</body>
+
+</html>
